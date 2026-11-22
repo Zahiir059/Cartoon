@@ -1,0 +1,23 @@
+name: Build Cartoon.exe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: pyinstaller --noconfirm --clean Cartoon.spec
+      - name: Self-test the built EXE
+        shell: pwsh
+        run: |
+          $env:CARTOON_SELFTEST = "1"
+          $p = Start-Process -FilePath dist\Cartoon.exe -RedirectStandardOutput out.txt -PassThru -Wait
+          Get-Content out.txt
+          if (-not (Select-String -Path out.txt -Pattern "SELFTEST OK" -Quiet)) { throw "EXE self-test failed" }
+      - uses: actions/upload-artifact@v4
+        with: { name: Cartoon.exe, path: dist/Cartoon.exe }
